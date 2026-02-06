@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,10 +13,10 @@ import (
 )
 
 // Server serves torrent files over HTTP with range-request support.
-// The active file can be swapped at runtime for sequential episode playback.
+// Each file is available at /stream/<index> for mpv playlist integration.
 type Server struct {
 	mu       sync.RWMutex
-	file     *torrent.File
+	files    []*torrent.File
 	listener net.Listener
 	srv      *http.Server
 }
@@ -31,7 +33,7 @@ func NewServer() (*Server, error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/stream", s.handleStream)
+	mux.HandleFunc("/stream/", s.handleStream)
 
 	s.srv = &http.Server{
 		Handler:      mux,
@@ -42,16 +44,21 @@ func NewServer() (*Server, error) {
 	return s, nil
 }
 
-// SetFile swaps the active torrent file being served.
-func (s *Server) SetFile(f *torrent.File) {
+// SetFiles sets all the torrent files available for streaming.
+func (s *Server) SetFiles(files []*torrent.File) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.file = f
+	s.files = files
 }
 
-// URL returns the stream endpoint URL.
-func (s *Server) URL() string {
-	return fmt.Sprintf("http://%s/stream", s.listener.Addr().String())
+// FileURL returns the stream URL for a specific file index.
+func (s *Server) FileURL(idx int) string {
+	return fmt.Sprintf("http://%s/stream/%d", s.listener.Addr().String(), idx)
+}
+
+// Addr returns the listener address.
+func (s *Server) Addr() string {
+	return s.listener.Addr().String()
 }
 
 // Serve starts the HTTP server (blocks until closed).
@@ -65,14 +72,22 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	f := s.file
-	s.mu.RUnlock()
-
-	if f == nil {
-		http.Error(w, "no file loaded", http.StatusServiceUnavailable)
+	// Parse file index from /stream/<idx>
+	idxStr := strings.TrimPrefix(r.URL.Path, "/stream/")
+	idx, err := strconv.Atoi(idxStr)
+	if err != nil {
+		http.Error(w, "invalid file index", http.StatusBadRequest)
 		return
 	}
+
+	s.mu.RLock()
+	if idx < 0 || idx >= len(s.files) {
+		s.mu.RUnlock()
+		http.Error(w, "file index out of range", http.StatusNotFound)
+		return
+	}
+	f := s.files[idx]
+	s.mu.RUnlock()
 
 	reader := f.NewReader()
 	defer reader.Close()
