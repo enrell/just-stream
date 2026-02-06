@@ -93,5 +93,5 @@ func Save(cfg *Config) error {
 	}
 	data = append(data, '\n')
 
-	return os.WriteFile(p, data, 0o644)
+	return os.WriteFile(p, data, 0o600)
 }

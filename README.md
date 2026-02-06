@@ -15,17 +15,32 @@ A TUI-based torrent streaming application that plays torrents directly in mpv wi
 
 ## Installation
 
-### Quick Install (Linux/macOS)
+### Quick Install (Linux/macOS) - Interactive
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/kokoro/just-stream/main/install.sh | bash
 ```
 
-### Quick Install (Windows PowerShell)
+The installer will:
+- ✅ Detect your Linux distribution
+- ✅ Check if dependencies (mpv, ffmpeg, curl) are installed
+- ❓ Ask to install missing dependencies using your package manager (apt, dnf, pacman, etc.)
+- ❓ Fallback to Homebrew if system package manager fails
+- ❓ Offer to install Anime4K shaders for enhanced quality
+
+### Quick Install (Windows PowerShell) - Interactive
 
 ```powershell
 irm https://raw.githubusercontent.com/kokoro/just-stream/main/install.ps1 | iex
 ```
+
+The installer will:
+- ✅ Check if dependencies (mpv, ffmpeg) are installed
+- ❓ Install Scoop package manager if not present
+- ❓ Install dependencies via Scoop (or fallback to Chocolatey/Winget)
+- ❓ Offer to install Anime4K shaders
+
+**Supported Windows package managers:** Scoop (preferred), Chocolatey, Winget
 
 ### Manual Installation
 
