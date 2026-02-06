@@ -89,129 +89,6 @@ ask_user() {
     done
 }
 
-# Install using package manager
-install_mpv_linux() {
-    local distro=$(detect_distro)
-    
-    print_info "Detected Linux distribution: $distro"
-    
-    # Check for various package managers and install accordingly
-    if check_command apt; then
-        # Debian/Ubuntu
-        print_info "Installing mpv using apt..."
-        if ask_user "Install mpv and ffmpeg via apt?"; then
-            sudo apt update && sudo apt install -y mpv ffmpeg || {
-                print_warning "apt installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command dnf; then
-        # Fedora/RHEL 8+
-        print_info "Installing mpv using dnf..."
-        if ask_user "Install mpv and ffmpeg via dnf?"; then
-            sudo dnf install -y mpv ffmpeg || {
-                print_warning "dnf installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command yum; then
-        # RHEL/CentOS 7
-        print_info "Installing mpv using yum..."
-        if ask_user "Install mpv and ffmpeg via yum?"; then
-            sudo yum install -y mpv ffmpeg || {
-                print_warning "yum installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command pacman; then
-        # Arch Linux
-        print_info "Installing mpv using pacman..."
-        if ask_user "Install mpv and ffmpeg via pacman?"; then
-            sudo pacman -S --noconfirm mpv ffmpeg || {
-                print_warning "pacman installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command zypper; then
-        # openSUSE
-        print_info "Installing mpv using zypper..."
-        if ask_user "Install mpv and ffmpeg via zypper?"; then
-            sudo zypper install -y mpv ffmpeg || {
-                print_warning "zypper installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command emerge; then
-        # Gentoo
-        print_info "Installing mpv using emerge..."
-        if ask_user "Install mpv and ffmpeg via emerge?"; then
-            sudo emerge mpv ffmpeg || {
-                print_warning "emerge installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command apk; then
-        # Alpine
-        print_info "Installing mpv using apk..."
-        if ask_user "Install mpv and ffmpeg via apk?"; then
-            sudo apk add mpv ffmpeg || {
-                print_warning "apk installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command xbps-install; then
-        # Void Linux
-        print_info "Installing mpv using xbps..."
-        if ask_user "Install mpv and ffmpeg via xbps?"; then
-            sudo xbps-install -y mpv ffmpeg || {
-                print_warning "xbps installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command snap; then
-        # Ubuntu/Debian with snap
-        print_info "Installing mpv using snap..."
-        if ask_user "Install mpv via snap?"; then
-            sudo snap install mpv || {
-                print_warning "snap installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    elif check_command flatpak; then
-        # Universal flatpak
-        print_info "Installing mpv using flatpak..."
-        if ask_user "Install mpv via flatpak?"; then
-            flatpak install -y flathub io.mpv.Mpv || {
-                print_warning "flatpak installation failed, trying homebrew..."
-                install_with_homebrew
-            }
-        fi
-    else
-        print_warning "No supported package manager found."
-        if ask_user "Install mpv and ffmpeg via Homebrew?"; then
-            install_with_homebrew
-        fi
-    fi
-}
-
-# Fallback to homebrew
-install_with_homebrew() {
-    if check_command brew; then
-        print_info "Installing mpv and ffmpeg via Homebrew..."
-        brew install mpv ffmpeg
-    else
-        print_info "Installing Homebrew first..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        if check_command brew; then
-            print_info "Installing mpv and ffmpeg via Homebrew..."
-            brew install mpv ffmpeg
-        else
-            print_error "Failed to install Homebrew. Please install mpv and ffmpeg manually."
-            exit 1
-        fi
-    fi
-}
-
 # Set environment variable for custom binary path
 set_custom_path() {
     local dep="$1"
@@ -260,13 +137,13 @@ set_custom_path() {
             shell_config="$HOME/.bash_profile"
         fi
         
-    if [ -n "$shell_config" ]; then
-        # Add header comment for easy identification
-        echo "" >> "$shell_config"
-        echo "# just-stream: Custom path for ${dep}" >> "$shell_config"
-        echo "export ${env_var}=\"${custom_path}\"" >> "$shell_config"
-        print_success "Added ${env_var}=${custom_path} to ${shell_config}"
-        print_info "Run 'source ${shell_config}' to apply the changes"
+        if [ -n "$shell_config" ]; then
+            # Add header comment for easy identification
+            echo "" >> "$shell_config"
+            echo "# just-stream: Custom path for ${dep}" >> "$shell_config"
+            echo "export ${env_var}=\"${custom_path}\"" >> "$shell_config"
+            print_success "Added ${env_var}=${custom_path} to ${shell_config}"
+            print_info "Run 'source ${shell_config}' to apply the changes"
         else
             print_warning "Could not find shell config file. Please manually add:"
             print_warning "  export ${env_var}=\"${custom_path}\""
@@ -326,6 +203,8 @@ check_and_install_dependencies() {
                 install_single_dep_linux "$dep"
             elif [ "$os" = "darwin" ]; then
                 install_single_dep_brew "$dep"
+            elif [ "$os" = "windows" ]; then
+                install_single_dep_windows "$dep"
             fi
         else
             # Offer to set custom path
@@ -414,6 +293,39 @@ install_single_dep_brew() {
     local dep="$1"
     print_info "Installing $dep via Homebrew..."
     brew install "$dep"
+}
+
+# Install single dependency on Windows (Git Bash/MSYS2)
+install_single_dep_windows() {
+    local dep="$1"
+    print_info "Installing $dep..."
+    
+    if check_command pacman; then
+        # MSYS2 environment
+        local pkg="$dep"
+        if [ "$dep" = "mpv" ]; then
+            pkg="mingw-w64-x86_64-mpv"
+        elif [ "$dep" = "ffmpeg" ]; then
+            pkg="mingw-w64-x86_64-ffmpeg"
+        fi
+        pacman -S --noconfirm "$pkg" || {
+            print_warning "pacman installation failed."
+            print_error "Please install $dep manually (e.g. via Scoop: scoop install $dep)"
+        }
+    elif check_command scoop; then
+        scoop install "$dep" || {
+            print_warning "scoop installation failed."
+            print_error "Please install $dep manually."
+        }
+    elif check_command choco; then
+        choco install "$dep" -y || {
+            print_warning "choco installation failed."
+            print_error "Please install $dep manually."
+        }
+    else
+        print_error "No supported package manager found (pacman, scoop, choco)."
+        print_error "Please install $dep manually."
+    fi
 }
 
 # Fallback to homebrew for single dependency
@@ -538,12 +450,7 @@ setup_anime4k() {
     print_info ""
     print_info "Setting up Anime4K shaders..."
     
-    local shader_dir=""
-    if [ "$(detect_os)" = "darwin" ]; then
-        shader_dir="${HOME}/.config/mpv/shaders"
-    else
-        shader_dir="${HOME}/.config/mpv/shaders"
-    fi
+    local shader_dir="${HOME}/.config/mpv/shaders"
     
     mkdir -p "${shader_dir}"
     
@@ -559,58 +466,47 @@ setup_anime4k() {
     fi
 }
 
-# Windows installation instructions
-install_windows_instructions() {
-    print_info ""
-    print_info "Windows Installation"
-    print_info "===================="
-    print_info ""
-    print_info "For Windows, please use PowerShell with the following commands:"
-    print_info ""
-    print_info "1. Install Scoop (if not already installed):"
-    print_info '   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser'
-    print_info '   Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression'
-    print_info ""
-    print_info "2. Install dependencies:"
-    print_info "   scoop install mpv ffmpeg curl"
-    print_info ""
-    print_info "3. Download just-stream:"
-    print_info "   Invoke-WebRequest -Uri 'https://github.com/kokoro/just-stream/releases/latest/download/just-stream-windows-amd64.exe' -OutFile 'just-stream.exe'"
-    print_info ""
-    print_info "4. Add to your PATH and use:"
-    print_info "   .\just-stream.exe"
-}
-
 install_windows() {
-    print_warning ""
-    print_warning "Windows installation should be done via PowerShell."
-    install_windows_instructions
+    local version="$1"
+    local arch="$2"
     
-    # Still try to download if running in Git Bash/MSYS
-    if [ -n "$MSYSTEM" ] || [ -n "$MINGW_PREFIX" ]; then
-        print_info ""
-        print_info "Detected Git Bash/MSYS environment. Attempting to install..."
-        
-        local version="$1"
-        local arch="$2"
-        local install_dir="${INSTALL_DIR_WIN}"
-        
-        mkdir -p "${install_dir}"
-        
-        # Download binary
-        local download_url="https://github.com/${REPO}/releases/download/${version}/just-stream-windows-${arch}.exe"
-        print_info "Downloading from: ${download_url}"
-        
-        if ! curl -L -o "${install_dir}/just-stream.exe" "${download_url}"; then
-            print_warning "Failed to download with arch suffix. Trying generic binary name..."
-            curl -L -o "${install_dir}/just-stream.exe" "https://github.com/${REPO}/releases/download/${version}/just-stream.exe"
-        fi
-        
-        print_success ""
-        print_success "✓ just-stream installed to ${install_dir}/just-stream.exe"
+    # Check if running in Git Bash/MSYS — otherwise redirect to PowerShell installer
+    if [ -z "$MSYSTEM" ] && [ -z "$MINGW_PREFIX" ]; then
         print_warning ""
-        print_warning "Remember to add ${install_dir} to your Windows PATH"
+        print_warning "Windows installation is recommended via PowerShell."
+        print_info "Run the following in PowerShell:"
+        print_info ""
+        print_info '  Invoke-WebRequest -Uri "https://raw.githubusercontent.com/kokoro/just-stream/main/install.ps1" -OutFile install.ps1; .\install.ps1'
+        print_info ""
+        print_warning "If you are in Git Bash/MSYS, re-run this script from that shell."
+        return
     fi
+    
+    print_info ""
+    print_info "Detected Git Bash/MSYS environment."
+    
+    # Check and install dependencies
+    check_and_install_dependencies "windows"
+    
+    print_info ""
+    print_info "Installing just-stream ${version} for Windows ${arch}..."
+    
+    local install_dir="${INSTALL_DIR_WIN}"
+    mkdir -p "${install_dir}"
+    
+    # Download binary
+    local download_url="https://github.com/${REPO}/releases/download/${version}/just-stream-windows-${arch}.exe"
+    print_info "Downloading from: ${download_url}"
+    
+    if ! curl -L -o "${install_dir}/just-stream.exe" "${download_url}"; then
+        print_warning "Failed to download with arch suffix. Trying generic binary name..."
+        curl -L -o "${install_dir}/just-stream.exe" "https://github.com/${REPO}/releases/download/${version}/just-stream.exe"
+    fi
+    
+    print_success ""
+    print_success "✓ just-stream installed to ${install_dir}/just-stream.exe"
+    print_warning ""
+    print_warning "Remember to add ${install_dir} to your Windows PATH"
 }
 
 main() {
