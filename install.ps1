@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "kokoro/just-stream"
+$Repo = "enrell/just-stream"
 $InstallDir = "$env:LOCALAPPDATA\bin"
 $BinaryName = "just-stream.exe"
 
