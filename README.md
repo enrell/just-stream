@@ -18,7 +18,7 @@ A TUI-based torrent streaming application that plays torrents directly in mpv wi
 ### Quick Install (Linux/macOS) - Interactive
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/kokoro/just-stream/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/enrell/just-stream/main/install.sh | bash
 ```
 
 The installer will:
@@ -31,7 +31,7 @@ The installer will:
 ### Quick Install (Windows PowerShell) - Interactive
 
 ```powershell
-irm https://raw.githubusercontent.com/kokoro/just-stream/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/enrell/just-stream/main/install.ps1 | iex
 ```
 
 The installer will:
@@ -48,19 +48,19 @@ The installer will:
 
 ```bash
 # Download latest release
-curl -L -o just-stream https://github.com/kokoro/just-stream/releases/latest/download/just-stream
+curl -L -o just-stream https://github.com/enrell/just-stream/releases/latest/download/just-stream
 chmod +x just-stream
 sudo mv just-stream /usr/local/bin/
 ```
 
 #### Windows
 
-Download `just-stream.exe` from the [releases page](https://github.com/kokoro/just-stream/releases) and add it to your PATH.
+Download `just-stream.exe` from the [releases page](https://github.com/enrell/just-stream/releases) and add it to your PATH.
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/kokoro/just-stream.git
+git clone https://github.com/enrell/just-stream.git
 cd just-stream
 make install
 ```
