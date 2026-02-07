@@ -387,10 +387,12 @@ func (m Model) updateFiles(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = 0
 		case "G", "end":
 			m.cursor = len(m.files) - 1
-		case "enter":
-			return m.beginPlayback(m.cursor, false)
-		case "a":
-			return m.beginPlayback(0, true)
+			case "enter":
+				m.err = nil // Clear previous error
+				return m.beginPlayback(m.cursor, false)
+			case "a":
+				m.err = nil // Clear previous error
+				return m.beginPlayback(0, true)
 		case "q", "esc":
 			m.quitting = true
 			m.cleanup()
@@ -408,6 +410,11 @@ func (m Model) viewFiles() string {
 	b.WriteString("\n")
 	b.WriteString(dimStyle.Render(fmt.Sprintf("%d episodes found", len(m.files))))
 	b.WriteString("\n\n")
+
+	if m.err != nil {
+		b.WriteString(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
+		b.WriteString("\n\n")
+	}
 
 	visible := m.height - 10
 	if visible < 5 {
@@ -480,14 +487,17 @@ func (m Model) updatePlaying(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case mpvExitedMsg:
-		// mpv exited (user quit or playlist ended). Return to file list.
-		m.cleanupPlayback()
-		m.screen = screenFiles
-		if m.currentFile < len(m.files) {
-			m.cursor = m.currentFile
-		}
-		return m, nil
+case mpvExitedMsg:
+			// mpv exited (user quit or playlist ended). Return to file list.
+			if msg.err != nil {
+				m.err = fmt.Errorf("mpv failed to start: %w", msg.err)
+			}
+			m.cleanupPlayback()
+			m.screen = screenFiles
+			if m.currentFile < len(m.files) {
+				m.cursor = m.currentFile
+			}
+			return m, nil
 
 	case tickMsg:
 		return m, m.cmdTick()
