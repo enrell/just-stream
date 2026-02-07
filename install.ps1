@@ -25,8 +25,25 @@ function Write-Error($Message) {
 }
 
 function Get-LatestRelease {
-    $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest"
-    return $response.tag_name
+    try {
+        $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -ErrorAction Stop
+        return $response.tag_name
+    } catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        if ($statusCode -eq 404) {
+            Write-Error "No releases found for $Repo"
+            Write-Info ""
+            Write-Info "The repository exists but has no published releases."
+            Write-Info "You can either:"
+            Write-Info "  1. Build from source: git clone https://github.com/$Repo && cd just-stream && go build"
+            Write-Info "  2. Wait for the maintainer to publish a release"
+            Write-Info ""
+            Write-Info "For manual installation, visit: https://github.com/$Repo"
+        } else {
+            Write-Error "Failed to fetch latest release: $_"
+        }
+        return $null
+    }
 }
 
 function Get-Architecture {
