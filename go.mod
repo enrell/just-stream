@@ -1,4 +1,4 @@
-module github.com/kokoro/just-stream
+module github.com/enrell/just-stream
 
 go 1.25.6
 
