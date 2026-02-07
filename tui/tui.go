@@ -16,10 +16,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/net/proxy"
 
-	"github.com/kokoro/just-stream/config"
-	"github.com/kokoro/just-stream/player"
-	memstorage "github.com/kokoro/just-stream/storage"
-	"github.com/kokoro/just-stream/stream"
+"github.com/enrell/just-stream/config"
+	"github.com/enrell/just-stream/player"
+	memstorage "github.com/enrell/just-stream/storage"
+	"github.com/enrell/just-stream/stream"
 )
 
 // --- Styles ---

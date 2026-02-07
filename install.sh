@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="kokoro/just-stream"
+REPO="enrell/just-stream"
 INSTALL_DIR_LINUX="${HOME}/.local/bin"
 INSTALL_DIR_WIN="${LOCALAPPDATA:-$HOME/AppData/Local}/bin"
 
@@ -476,7 +476,7 @@ install_windows() {
         print_warning "Windows installation is recommended via PowerShell."
         print_info "Run the following in PowerShell:"
         print_info ""
-        print_info '  Invoke-WebRequest -Uri "https://raw.githubusercontent.com/kokoro/just-stream/main/install.ps1" -OutFile install.ps1; .\install.ps1'
+print_info ' Invoke-WebRequest -Uri "https://raw.githubusercontent.com/enrell/just-stream/main/install.ps1" -OutFile install.ps1; .\install.ps1'
         print_info ""
         print_warning "If you are in Git Bash/MSYS, re-run this script from that shell."
         return

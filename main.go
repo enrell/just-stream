@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/kokoro/just-stream/config"
-	memstorage "github.com/kokoro/just-stream/storage"
-	"github.com/kokoro/just-stream/tui"
+"github.com/enrell/just-stream/config"
+	memstorage "github.com/enrell/just-stream/storage"
+	"github.com/enrell/just-stream/tui"
 )
 
 func main() {
