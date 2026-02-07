@@ -382,12 +382,14 @@ function Install-JustStream {
         }
     }
     
-    if (-not $inPath) {
-        Write-Warning ""
-        Write-Warning "$InstallDir is not in your PATH"
-        Write-Info "Add it to your PATH with:"
-        Write-Info "  [Environment]::SetEnvironmentVariable('Path', '`$env:Path;$InstallDir', 'User')"
-    }
+if (-not $inPath) {
+    Write-Info ""
+    Write-Info "Adding $InstallDir to your PATH..."
+    [Environment]::SetEnvironmentVariable('Path', "$env:Path;$InstallDir", 'User')
+    # Also update current session
+    $env:Path = "$env:Path;$InstallDir"
+    Write-Success "Added to PATH! You may need to restart your terminal."
+}
     
     Write-Info ""
     Write-Info "Usage: just-stream [magnet-link]"
