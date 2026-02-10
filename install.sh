@@ -446,23 +446,117 @@ install_darwin() {
     fi
 }
 
+get_gpu_tier() {
+    print_info ""
+    print_info "Select your GPU tier for optimal Anime4K settings:"
+    print_info ""
+    print_info "1. Low-End (GTX 980, GTX 1060, RX 570, M1, M2)"
+    print_info "   - Optimized templates with smaller shader variants (S/M)"
+    print_info "   - Balanced quality and performance"
+    print_info ""
+    print_info "2. High-End (GTX 1080, RTX 2070, RTX 3060, RX 590, Vega 56, 5700XT, 6600XT)"
+    print_info "   - Full templates with larger shader variants (L/VL/UL)"
+    print_info "   - Maximum quality enhancement"
+    print_info ""
+    
+    read -r -p "Enter your choice [1-2 or n to skip]: " choice
+    
+    case "$choice" in
+        1) echo "low" ;;
+        2) echo "high" ;;
+        [Nn]) echo "" ;;
+        *)
+            print_warning "Invalid choice. Skipping Anime4K setup."
+            echo ""
+            ;;
+    esac
+}
+
 setup_anime4k() {
+    local gpu_tier
+    gpu_tier=$(get_gpu_tier)
+    
+    if [ -z "$gpu_tier" ]; then
+        print_info "Skipping Anime4K setup."
+        return
+    fi
+    
     print_info ""
     print_info "Setting up Anime4K shaders..."
     
-    local shader_dir="${HOME}/.config/mpv/shaders"
+    local mpv_dir="${HOME}/.config/mpv"
+    local shader_dir="${mpv_dir}/shaders"
+    local temp_dir="/tmp/Anime4K"
     
     mkdir -p "${shader_dir}"
     
-    print_info "Downloading Anime4K shaders to ${shader_dir}..."
+    local template_file="/tmp/Anime4K_template.zip"
+    local template_url
+    if [ "$gpu_tier" = "low" ]; then
+        template_url="https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Mac_Linux_Low-end.zip"
+    else
+        template_url="https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Mac_Linux_High-end.zip"
+    fi
     
-    if curl -L -o /tmp/Anime4K.zip "https://github.com/bloc97/Anime4K/releases/download/v4.0.1/Anime4K_v4.0.1.zip"; then
-        unzip -o /tmp/Anime4K.zip -d "${shader_dir}"
-        rm -f /tmp/Anime4K.zip
-        print_success "✓ Anime4K shaders installed"
+    print_info "Downloading Anime4K template for $(if [ "$gpu_tier" = "low" ]; then echo "Low-End"; else echo "High-End"; fi) GPU..."
+    
+    if curl -L -o "${template_file}" "${template_url}"; then
+        # Clean up temp directory
+        rm -rf "${temp_dir}"
+        mkdir -p "${temp_dir}"
+        
+        # Extract
+        unzip -o "${template_file}" -d "${temp_dir}"
+        rm -f "${template_file}"
+        
+        # Find shaders folder
+        local shader_source_dir
+        shader_source_dir=$(find "${temp_dir}" -type d -name "shaders" 2>/dev/null | head -1)
+        if [ -z "$shader_source_dir" ]; then
+            shader_source_dir="${temp_dir}"
+        fi
+        
+        # Copy shaders (excluding macOS metadata files)
+        print_info "Installing shaders..."
+        find "${shader_source_dir}" -maxdepth 1 -name "*.glsl" ! -name "._*" -exec cp {} "${shader_dir}/" \;
+        
+        # Copy config files if they don't exist
+        for config_file in mpv.conf input.conf; do
+            local found_file
+            found_file=$(find "${temp_dir}" -type f -name "${config_file}" 2>/dev/null | head -1)
+            if [ -n "$found_file" ]; then
+                if [ -f "${mpv_dir}/${config_file}" ]; then
+                    print_warning "Skipping ${config_file} - file already exists at ${mpv_dir}/${config_file}"
+                else
+                    cp "$found_file" "${mpv_dir}/"
+                    print_success "Installed ${config_file} to: ${mpv_dir}"
+                fi
+            fi
+        done
+        
+        # Cleanup
+        rm -rf "${temp_dir}"
+        
+        print_success ""
+        print_success "✓ Anime4K installed for $(if [ "$gpu_tier" = "low" ]; then echo "Low-End"; else echo "High-End"; fi) GPU!"
+        print_info ""
+        print_info "Keyboard shortcuts:"
+        print_info " CTRL+1 - Mode A (Optimized for 1080p Anime)"
+        print_info " CTRL+2 - Mode B (Optimized for 720p Anime)"
+        print_info " CTRL+3 - Mode C (Optimized for 480p Anime)"
+        print_info " CTRL+0 - Disable Anime4K"
+        print_info ""
+        print_info "Configuration files: ~/.config/mpv/"
+        print_info "Shaders: ~/.config/mpv/shaders/"
+        print_info ""
+        print_info "More info: https://github.com/bloc97/Anime4K/blob/master/md/GLSL_Instructions_Linux.md"
     else
         print_error "Failed to download Anime4K shaders. You can manually download them from:"
-        print_error "https://github.com/bloc97/Anime4K/releases"
+        if [ "$gpu_tier" = "low" ]; then
+            print_error "https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Mac_Linux_Low-end.zip"
+        else
+            print_error "https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Mac_Linux_High-end.zip"
+        fi
     fi
 }
 
