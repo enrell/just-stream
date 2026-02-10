@@ -61,6 +61,38 @@ function Test-Command($Command) {
     return $?
 }
 
+function Find-MPV {
+    # Check if MPV_PATH environment variable is set
+    if ($env:MPV_PATH -and (Test-Path $env:MPV_PATH -PathType Leaf)) {
+        return $env:MPV_PATH
+    }
+
+    # Check if mpv is in PATH
+    $mpvCommand = Get-Command "mpv" -ErrorAction SilentlyContinue
+    if ($mpvCommand) {
+        return $mpvCommand.Source
+    }
+
+    # Check common installation paths
+    $commonPaths = @(
+        "$env:LOCALAPPDATA\Programs\mpv.net\mpvnet.exe",
+        "$env:LOCALAPPDATA\Programs\mpv.net\mpv.exe",
+        "$env:LOCALAPPDATA\mpv\mpv.exe",
+        "$env:PROGRAMFILES\mpv\mpv.exe",
+        "$env:PROGRAMFILES(x86)\mpv\mpv.exe",
+        "$env:PROGRAMFILES\mpv.net\mpvnet.exe",
+        "$env:PROGRAMFILES(x86)\mpv.net\mpvnet.exe"
+    )
+
+    foreach ($path in $commonPaths) {
+        if (Test-Path $path -PathType Leaf) {
+            return $path
+        }
+    }
+
+    return $null
+}
+
 function Ask-User($Prompt) {
     $response = Read-Host "$Prompt [Y/n]"
     $response = if ($response) { $response } else { "Y" }
@@ -104,7 +136,7 @@ function Install-Dependencies-With-Scoop {
     }
     
     # Install mpv
-    if (-not (Test-Command "mpv")) {
+    if (-not (Find-MPV)) {
         Write-Info "Installing mpv..."
         try {
             scoop install mpv
@@ -144,7 +176,7 @@ function Install-Dependencies-With-Chocolatey {
     }
     
     # Install mpv
-    if (-not (Test-Command "mpv")) {
+    if (-not (Find-MPV)) {
         Write-Info "Installing mpv via Chocolatey..."
         try {
             choco install mpv -y
@@ -155,7 +187,7 @@ function Install-Dependencies-With-Chocolatey {
     } else {
         Write-Success "mpv is already installed"
     }
-    
+
     # Install ffmpeg
     if (-not (Test-Command "ffmpeg")) {
         Write-Info "Installing ffmpeg via Chocolatey..."
@@ -184,7 +216,7 @@ function Install-Dependencies-With-Winget {
     }
     
     # Install mpv
-    if (-not (Test-Command "mpv")) {
+    if (-not (Find-MPV)) {
         Write-Info "Installing mpv via Winget..."
         try {
             winget install --id=mpv.io -e
@@ -195,7 +227,7 @@ function Install-Dependencies-With-Winget {
     } else {
         Write-Success "mpv is already installed"
     }
-    
+
     # Install ffmpeg
     if (-not (Test-Command "ffmpeg")) {
         Write-Info "Installing ffmpeg via Winget..."
@@ -222,7 +254,7 @@ function Set-Custom-Path {
     switch ($Dep) {
         "mpv" {
             $envVar = "MPV_PATH"
-            $defaultPath = "C:\Program Files\mpv\mpv.exe"
+            $defaultPath = "$env:LOCALAPPDATA\Programs\mpv.net\mpvnet.exe"
         }
         "ffmpeg" {
             $envVar = "FFMPEG_PATH"
@@ -253,18 +285,24 @@ function Check-And-Install-Dependencies {
     Write-Info ""
     Write-Info "Checking dependencies..."
     Write-Info "======================="
-    
+
     $missingDeps = @()
-    
-    # Check if commands exist OR environment variables are set
-    if (-not (Test-Command "mpv") -and -not $env:MPV_PATH) {
+
+    # Check mpv - use Find-MPV which searches PATH and common locations
+    $mpvPath = Find-MPV
+    if ($mpvPath) {
+        $env:MPV_PATH = $mpvPath
+        Set-Item -Path "Env:MPV_PATH" -Value $mpvPath
+        Write-Success "Found mpv at: $mpvPath"
+    } else {
         $missingDeps += "mpv"
     }
-    
+
+    # Check ffmpeg
     if (-not (Test-Command "ffmpeg") -and -not $env:FFMPEG_PATH) {
         $missingDeps += "ffmpeg"
     }
-    
+
     if ($missingDeps.Count -eq 0) {
         Write-Success "All dependencies are installed!"
         return $true
