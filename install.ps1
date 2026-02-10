@@ -432,7 +432,9 @@ function Setup-Anime4K {
         }
         
         Write-Info "Installing shaders..."
-        Get-ChildItem -Path $shaderSourceDir -Filter "*.glsl" | ForEach-Object {
+        Get-ChildItem -Path $shaderSourceDir -Filter "*.glsl" | Where-Object { 
+            $_.Name -notmatch "^\._"  # Exclude macOS metadata files
+        } | ForEach-Object {
             Copy-Item -Path $_.FullName -Destination $shaderDir -Force
         }
         
