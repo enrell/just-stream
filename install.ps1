@@ -400,11 +400,11 @@ function Setup-Anime4K {
     New-Item -ItemType Directory -Force -Path $shaderDir | Out-Null
     
     $tempDir = "$env:TEMP\Anime4K"
-    $tempFile = "$env:TEMP\Anime4K_v4.0.1.zip"
-    
+        $tempFile = "$env:TEMP\Anime4K_v4.0.zip"
+
     try {
         Write-Info "Downloading Anime4K shaders v4.0.1..."
-        $downloadUrl = "https://github.com/bloc97/Anime4K/releases/download/v4.0.1/Anime4K_v4.0.1.zip"
+        $downloadUrl = "https://github.com/bloc97/Anime4K/releases/download/v4.0.1/Anime4K_v4.0.zip"
         Invoke-WebRequest -Uri $downloadUrl -OutFile $tempFile -ErrorAction Stop
         
         Write-Info "Extracting shaders..."
@@ -452,7 +452,7 @@ function Setup-Anime4K {
         Write-Info "https://github.com/bloc97/Anime4K/releases"
         Write-Info ""
         Write-Info "Instructions:"
-        Write-Info "1. Download Anime4K_v4.0.1.zip"
+        Write-Info "1. Download Anime4K_v4.0.zip"
         Write-Info "2. Extract .glsl files to: $shaderDir"
         Write-Info "3. Configure mpv.conf with appropriate shaders for your GPU"
     }
