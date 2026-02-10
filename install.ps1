@@ -362,12 +362,12 @@ function Get-GPU-Tier {
     Write-Info ""
     Write-Info "Select your GPU tier for optimal Anime4K settings:"
     Write-Info ""
-    Write-Info "1. Low-End (GTX 980/1060, RX 570, GTX 1650, Intel UHD/ARC, M1/M2)"
-    Write-Info "   - Optimized shaders with smaller network sizes (S/M)"
+    Write-Info "1. Low-End (GTX 980, GTX 1060, RX 570)"
+    Write-Info "   - Optimized templates with smaller shader variants (S/M)"
     Write-Info "   - Balanced quality and performance"
     Write-Info ""
-    Write-Info "2. High-End (GTX 1080+, RTX 2070/3060+, RX 6000+, RTX 4060+)"
-    Write-Info "   - Full shader set with larger networks (L/VL/UL)"
+    Write-Info "2. High-End (GTX 1080, RTX 2070, RTX 3060, RX 590, Vega 56, 5700XT, 6600XT)"
+    Write-Info "   - Full templates with larger shader variants (L/VL/UL)"
     Write-Info "   - Maximum quality enhancement"
     Write-Info ""
     
@@ -396,65 +396,91 @@ function Setup-Anime4K {
         return
     }
     
-    $shaderDir = "$env:APPDATA\mpv\shaders"
+    $mpvDir = "$env:APPDATA\mpv"
+    $shaderDir = "$mpvDir\shaders"
     New-Item -ItemType Directory -Force -Path $shaderDir | Out-Null
     
     $tempDir = "$env:TEMP\Anime4K"
-        $tempFile = "$env:TEMP\Anime4K_v4.0.zip"
-
+    
+    # Download template from Tama47's community release with pre-configured mpv.conf and input.conf
+    $templateFile = "$env:TEMP\Anime4K_template.zip"
+    $templateUrl = if ($gpuTier -eq "low") {
+        "https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Windows_Low-end.zip"
+    } else {
+        "https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Windows_High-end.zip"
+    }
+    
     try {
-        Write-Info "Downloading Anime4K shaders v4.0.1..."
-        $downloadUrl = "https://github.com/bloc97/Anime4K/releases/download/v4.0.1/Anime4K_v4.0.zip"
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $tempFile -ErrorAction Stop
+        Write-Info "Downloading Anime4K template for $(if($gpuTier -eq 'low'){'Low-End'}else{'High-End'}) GPU..."
+        Invoke-WebRequest -Uri $templateUrl -OutFile $templateFile -ErrorAction Stop
         
-        Write-Info "Extracting shaders..."
+        Write-Info "Extracting template files..."
         if (Test-Path $tempDir) {
             Remove-Item -Path $tempDir -Recurse -Force
         }
         New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-        Expand-Archive -Path $tempFile -DestinationPath $tempDir -Force
-        Remove-Item -Path $tempFile -Force
+        Expand-Archive -Path $templateFile -DestinationPath $tempDir -Force
+        Remove-Item -Path $templateFile -Force
         
-        # Copy shaders based on GPU tier
-        if ($gpuTier -eq "low") {
-            Write-Info "Installing Low-End GPU shaders (S/M variants)..."
-            Get-ChildItem -Path $tempDir -Filter "*.glsl" | Where-Object { 
-                $_.Name -match "_(S|M)\\.glsl$" -or $_.Name -match "Upscale" -or $_.Name -match "Denoise" -or $_.Name -match "AutoDownscale"
-            } | ForEach-Object {
-                Copy-Item -Path $_.FullName -Destination $shaderDir -Force
-            }
-            Write-Success "Low-End GPU shaders installed!"
-            Write-Info ""
-            Write-Info "Recommended config for mpv.conf:"
-            Write-Info "glsl-shaders=~~/shaders/Anime4K_Upscale_CNN_x2_S.glsl;~~/shaders/Anime4K_Auto_Downscale_Pre_x2.glsl"
+        # Find the shader folder (may be in a subdirectory)
+        $shaderSourceDir = Get-ChildItem -Path $tempDir -Filter "shaders" -Recurse -Directory | Select-Object -First 1
+        if ($shaderSourceDir) {
+            $shaderSourceDir = $shaderSourceDir.FullName
         } else {
-            Write-Info "Installing High-End GPU shaders (Full set)..."
-            Get-ChildItem -Path $tempDir -Filter "*.glsl" | ForEach-Object {
-                Copy-Item -Path $_.FullName -Destination $shaderDir -Force
+            # If no shaders folder found, use root
+            $shaderSourceDir = $tempDir
+        }
+        
+        Write-Info "Installing shaders..."
+        Get-ChildItem -Path $shaderSourceDir -Filter "*.glsl" | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $shaderDir -Force
+        }
+        
+        # Find and copy mpv.conf and input.conf
+        $configFiles = Get-ChildItem -Path $tempDir -Include @("mpv.conf", "input.conf") -Recurse -File
+        foreach ($configFile in $configFiles) {
+            $destPath = "$mpvDir\$($configFile.Name)"
+            if (Test-Path $destPath) {
+                Write-Warning "Skipping $($configFile.Name) - file already exists at $destPath"
+            } else {
+                Copy-Item -Path $configFile.FullName -Destination $mpvDir -Force
+                Write-Success "Installed $($configFile.Name) to: $mpvDir"
             }
-            Write-Success "High-End GPU shaders installed!"
-            Write-Info ""
-            Write-Info "Recommended config for mpv.conf (Mode A+A HQ):"
-            Write-Info "glsl-shaders=~~/shaders/Anime4K_Clamp_Highlights.glsl;~~/shaders/Anime4K_Restore_CNN_VL.glsl;~~/shaders/Anime4K_Upscale_CNN_x2_VL.glsl;~~/shaders/Anime4K_Restore_CNN_M.glsl;~~/shaders/Anime4K_Auto_Downscale_Pre_x2.glsl;~~/shaders/Anime4K_Upscale_CNN_x2_M.glsl"
         }
         
         Remove-Item -Path $tempDir -Recurse -Force
         
+        Write-Success ""
+        Write-Success "✓ Anime4K installed for $(if($gpuTier -eq 'low'){'Low-End'}else{'High-End'}) GPU!"
         Write-Info ""
+        Write-Info "Keyboard shortcuts:"
+        Write-Info " CTRL+1 - Mode A (Optimized for 1080p Anime)"
+        Write-Info " CTRL+2 - Mode B (Optimized for 720p Anime)"
+        Write-Info " CTRL+3 - Mode C (Optimized for 480p Anime)"
+        Write-Info " CTRL+0 - Disable Anime4K"
+        Write-Info ""
+        Write-Info "Configuration files installed to: $mpvDir"
         Write-Info "Shaders installed to: $shaderDir"
         Write-Info ""
-        Write-Info "To customize shaders, edit: %APPDATA%\mpv\mpv.conf"
+        Write-Info "To customize, edit:"
+        Write-Info "  - %APPDATA%\mpv\mpv.conf"
+        Write-Info "  - %APPDATA%\mpv\input.conf"
+        Write-Info ""
         Write-Info "More info: https://github.com/bloc97/Anime4K/blob/master/md/GLSL_Instructions_Windows_MPV.md"
     } catch {
         Write-Error "Failed to install Anime4K shaders: $_"
         Write-Info ""
         Write-Info "You can manually download them from:"
-        Write-Info "https://github.com/bloc97/Anime4K/releases"
+        if ($gpuTier -eq "low") {
+            Write-Info "https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Windows_Low-end.zip"
+        } else {
+            Write-Info "https://github.com/Tama47/Anime4K/releases/download/v4.0.1/GLSL_Windows_High-end.zip"
+        }
         Write-Info ""
         Write-Info "Instructions:"
-        Write-Info "1. Download Anime4K_v4.0.zip"
-        Write-Info "2. Extract .glsl files to: $shaderDir"
-        Write-Info "3. Configure mpv.conf with appropriate shaders for your GPU"
+        Write-Info "1. Download the template zip file"
+        Write-Info "2. Extract all files to: %APPDATA%\mpv"
+        Write-Info "3. Shaders will be in the 'shaders' folder"
     }
 }
 
