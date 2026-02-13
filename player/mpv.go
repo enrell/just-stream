@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -46,22 +47,39 @@ func Launch(opts LaunchOpts) (*MPV, error) {
 		var err error
 		mpvPath, err = exec.LookPath("mpv")
 		if err != nil {
-			// Try common Windows paths
-			commonPaths := []string{
-				`C:\Program Files\mpv\mpv.exe`,
-				`C:\Program Files (x86)\mpv\mpv.exe`,
-				`C:\tools\mpv\mpv.exe`,
-				`C:\Users\` + os.Getenv("USERNAME") + `\scoop\apps\mpv\current\mpv.exe`,
-				`C:\Users\` + os.Getenv("USERNAME") + `\AppData\Local\Microsoft\WindowsApps\mpv.exe`,
+			// Try mpvnet too (Windows fork with GUI)
+			if mpvPath, err = exec.LookPath("mpvnet"); err == nil {
+				mpvPath = "mpvnet"
 			}
-			for _, path := range commonPaths {
-				if _, statErr := os.Stat(path); statErr == nil {
-					mpvPath = path
-					break
+		}
+		if mpvPath == "" {
+			// Try common Windows paths
+			username := os.Getenv("USERNAME")
+			if username == "" {
+				if home, err := os.UserHomeDir(); err == nil {
+					username = filepath.Base(home)
+				}
+			}
+			if username != "" {
+				commonPaths := []string{
+					`C:\Program Files\mpv\mpv.exe`,
+					`C:\Program Files (x86)\mpv\mpv.exe`,
+					`C:\tools\mpv\mpv.exe`,
+					`C:\Users\` + username + `\scoop\apps\mpv\current\mpv.exe`,
+					`C:\Users\` + username + `\scoop\shims\mpv.exe`,
+					`C:\Users\` + username + `\AppData\Local\Microsoft\WindowsApps\mpv.exe`,
+					`C:\Users\` + username + `\AppData\Local\Programs\mpv.net\mpvnet.exe`,
+					`C:\ProgramData\chocolatey\lib\mpv\tools\mpv.exe`,
+				}
+				for _, path := range commonPaths {
+					if _, statErr := os.Stat(path); statErr == nil {
+						mpvPath = path
+						break
+					}
 				}
 			}
 			if mpvPath == "" {
-				return nil, fmt.Errorf("mpv not found in PATH or common locations (C:\\Program Files\\mpv, scoop, etc). Please install mpv or set MPV_PATH environment variable")
+				return nil, fmt.Errorf("mpv not found in PATH or common locations (C:\\Program Files\\mpv, scoop, mpv.net, etc). Please install mpv or set MPV_PATH environment variable")
 			}
 		}
 	}
